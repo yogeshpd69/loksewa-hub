@@ -70,7 +70,7 @@ export async function fetchSessions(userId: string): Promise<DBSession[]> {
 
 export async function addSessionMinutesDB(userId: string, date: string, minutes: number) {
   // Try to find if one exists for the date
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing } = await supabase
     .from('study_sessions')
     .select('id, duration_minutes')
     .eq('user_id', userId)

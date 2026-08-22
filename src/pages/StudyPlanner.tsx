@@ -104,7 +104,7 @@ const StudyPlanner: React.FC = () => {
   useEffect(() => {
     if (isRunning) {
       timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
+        setTimeLeft((prev: number) => {
           if (prev <= 1) {
             clearInterval(timerRef.current!);
             setIsRunning(false);
