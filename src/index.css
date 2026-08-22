@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #6C63FF;
+  --color-primary-hover: #5A52D9;
+  --color-secondary: #7C4DFF;
+  --color-accent: #FFB800;
+  --color-success: #16C784;
+  --color-danger: #FF5A5F;
+  --color-background: #F7F8FC;
+  --color-surface: #FFFFFF;
+
+  --color-dark-bg: #111827;
+  --color-dark-surface: #1F2937;
+
+  --font-sans: "Inter", "SF Pro Display", sans-serif;
+
+  --radius-xl: 20px;
+
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 10px 30px rgba(108, 99, 255, 0.15);
+}
+
+@layer base {
+  html.dark body {
+    background-color: var(--color-dark-bg);
+    color: #F9FAFB;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-soft;
+  }
+  
+  .dark .glass {
+    @apply bg-gray-900/70 border-gray-700/50;
+  }
+  
+  .gradient-purple {
+    @apply bg-gradient-to-br from-primary to-secondary text-white;
+  }
+  
+  .gradient-pink {
+    @apply bg-gradient-to-br from-pink-500 to-rose-400 text-white;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-hover cursor-pointer;
+  }
+  
+  .masonry-grid {
+    display: flex;
+    margin-left: -24px; /* gutter size offset */
+    width: auto;
+  }
+  
+  .masonry-grid_column {
+    padding-left: 24px; /* gutter size */
+    background-clip: padding-box;
+  }
+}
