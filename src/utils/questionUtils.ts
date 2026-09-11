@@ -17,12 +17,12 @@ export function shuffle<T>(array: T[]): T[] {
  * The correctAnswerIndex is updated to track the new position.
  */
 export function shuffleOptions(q: Question): Question {
-  const correctOption = q.options[q.correctAnswerIndex];
+  const correctOption = q.correctAnswerIndex !== undefined ? q.options[q.correctAnswerIndex] : undefined;
   const shuffled = shuffle(q.options);
   return {
     ...q,
     options: shuffled,
-    correctAnswerIndex: shuffled.indexOf(correctOption),
+    correctAnswerIndex: correctOption ? shuffled.indexOf(correctOption) : undefined,
   };
 }
 
