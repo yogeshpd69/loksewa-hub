@@ -50,9 +50,9 @@ const PracticeEngine: React.FC = () => {
       const q = await fetchPracticeQuestions(user.id, countParam, allowedTopics);
       setQuestions(q);
     } else {
-      // Guest mode: fetch strictly from allowed topics or random
-      const { fetchQuestions } = await import('../lib/questions');
-      const q = await fetchQuestions(allowedTopics, countParam);
+      // Guest mode: fallback to random questions since advanced filtering needs auth
+      const { fetchRandomQuestions } = await import('../lib/questions');
+      const q = await fetchRandomQuestions(countParam);
       // If activeSubs is set, we'd normally filter, but fetchRandomQuestions doesn't support it directly.
       // For simplicity in guest mode, just use what we get or we could use fetchQuestions.
       setQuestions(q);
