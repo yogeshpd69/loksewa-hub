@@ -171,11 +171,11 @@ export const PAPER_II_NEA_BCT: SyllabusPaper = {
   ]
 };
 
-// Paper II - BEI Example
-export const PAPER_II_BEI: SyllabusPaper = {
-  id: 'paper2-bei',
+// Paper II - PSC BEI Example
+export const PAPER_II_PSC_BEI: SyllabusPaper = {
+  id: 'paper2-psc-bei',
   paperNumber: 'Paper II',
-  title: 'Technical Subject (Electronics & Comm. Engineering)',
+  title: 'Technical Subject (Electronics & Comm. Engineering) - PSC',
   type: 'Subjective',
   totalMarks: 100,
   passMarks: 40,
@@ -201,6 +201,76 @@ export const PAPER_II_BEI: SyllabusPaper = {
         { id: 'bei-communication', name: 'Communication Systems' },
         { id: 'bei-telecom', name: 'Telecommunication Networks' },
         { id: 'bei-electromagnetic', name: 'Electromagnetic Theory' },
+      ]
+    }
+  ]
+};
+
+// Paper II - NTC BEI Example
+export const PAPER_II_NTC_BEI: SyllabusPaper = {
+  id: 'paper2-ntc-bei',
+  paperNumber: 'Paper II',
+  title: 'Telecom Engineering (Electronics & Comm) - NTC',
+  type: 'Subjective',
+  totalMarks: 100,
+  passMarks: 40,
+  duration: '3 Hours',
+  sections: [
+    {
+      id: 'ntc-bei-secA',
+      name: 'Section A: Cellular & Wireless',
+      marks: 50,
+      questions: 5,
+      topics: [
+        { id: 'bei-wireless', name: 'Wireless & Mobile Comm.' },
+        { id: 'ntc-radio', name: 'Radio Frequency Engineering' },
+        { id: 'ntc-broadband', name: 'Broadband Networks' },
+      ]
+    },
+    {
+      id: 'ntc-bei-secB',
+      name: 'Section B: Optical & Core Networks',
+      marks: 50,
+      questions: 5,
+      topics: [
+        { id: 'bei-optical', name: 'Optical Fiber Communication' },
+        { id: 'ntc-switching', name: 'Switching & Routing' },
+        { id: 'ntc-satellite', name: 'Satellite Communication' },
+      ]
+    }
+  ]
+};
+
+// Paper II - NEA BEI Example
+export const PAPER_II_NEA_BEI: SyllabusPaper = {
+  id: 'paper2-nea-bei',
+  paperNumber: 'Paper II',
+  title: 'Electronics Engineering (Energy Sector) - NEA',
+  type: 'Subjective',
+  totalMarks: 100,
+  passMarks: 40,
+  duration: '3 Hours',
+  sections: [
+    {
+      id: 'nea-bei-secA',
+      name: 'Section A: Instrumentation & Control',
+      marks: 50,
+      questions: 5,
+      topics: [
+        { id: 'bei-control', name: 'Control Systems' },
+        { id: 'nea-instrumentation', name: 'Industrial Instrumentation' },
+        { id: 'nea-measurement', name: 'Electrical Measurements' },
+      ]
+    },
+    {
+      id: 'nea-bei-secB',
+      name: 'Section B: Power Electronics & Automation',
+      marks: 50,
+      questions: 5,
+      topics: [
+        { id: 'nea-powerelec', name: 'Power Electronics' },
+        { id: 'bei-embedded', name: 'Embedded Systems' },
+        { id: 'nea-automation', name: 'Substation Automation (SCADA)' },
       ]
     }
   ]

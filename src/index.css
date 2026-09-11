@@ -61,4 +61,10 @@
     padding-left: 24px; /* gutter size */
     background-clip: padding-box;
   }
+
+  .font-nepali {
+    font-family: "Noto Sans Devanagari", "Mukta", "Kalimati", "Mangal", sans-serif;
+    line-height: 2.2 !important;
+    font-size: 1.05rem;
+  }
 }

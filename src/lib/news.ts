@@ -36,70 +36,66 @@ export async function fetchDailyNews(targetDate: Date = new Date()): Promise<New
     }
   }
 
-  // 2. If not found or stale (and we're asking for today), fetch RSS
+  // 2. If not found or stale (and we're asking for today), fetch from Kchakhabar API directly
   try {
-    const rssUrl = 'https://english.onlinekhabar.com/feed';
-    const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
+    const response = await fetch('https://kchakhabar.com/api/v1/today.json?limit=50');
     
-    if (!response.ok) throw new Error("Failed to fetch news feed");
+    if (!response.ok) throw new Error("Failed to fetch Kchakhabar API");
     
-    const json = await response.json();
-    
-    if (json.status !== 'ok' || !json.items) {
-      throw new Error("Invalid RSS format");
-    }
+    const apiData = await response.json();
+    const items = apiData.stories || [];
 
-    // Group items by date
     const articlesByDate: Record<string, NewsArticle[]> = {};
 
-    json.items.forEach((item: any) => {
-      // PubDate is usually like "2023-10-15 14:00:00"
+    for (const item of items) {
+      // Find actual publication date
       let itemDateStr = todayStr;
-      if (item.pubDate) {
-        try {
-          itemDateStr = new Date(item.pubDate.replace(' ', 'T')).toISOString().split('T')[0];
-        } catch(e) {
-          itemDateStr = todayStr;
+      if (item.first_reported) {
+        itemDateStr = item.first_reported.split('T')[0];
+      }
+
+      const title = item.topic_en || item.topic_ne || '';
+      const summary = item.summary_en || item.summary_ne || '';
+      const link = (item.sources && item.sources.length > 0) ? item.sources[0].url : '';
+      const publisher = (item.sources && item.sources.length > 0) ? item.sources[0].publisher : 'Kcha Khabar API';
+
+      if (title && link) {
+        if (!articlesByDate[itemDateStr]) {
+          articlesByDate[itemDateStr] = [];
         }
-      }
-
-      const summary = item.description.replace(/<[^>]*>?/gm, '').substring(0, 300) + '...';
-      const article = {
-        id: item.link,
-        title: item.title,
-        summary: summary,
-        topic: 'National News',
-        source: 'OnlineKhabar',
-        url: item.link
-      };
-
-      if (!articlesByDate[itemDateStr]) {
-        articlesByDate[itemDateStr] = [];
-      }
-      articlesByDate[itemDateStr].push(article);
-    });
-    
-    // Upsert all fetched dates into DB (fire and forget)
-    Object.entries(articlesByDate).forEach(([dStr, arts]) => {
-      if (arts.length > 0) {
-        supabase.from('daily_news').upsert({
-          news_date: dStr,
-          articles: arts
-        }, { onConflict: 'news_date' }).then(({ error }) => {
-          if (error) console.error("Failed to cache daily news:", error);
+        articlesByDate[itemDateStr].push({
+          id: item.id || link,
+          title,
+          summary,
+          topic: publisher,
+          source: publisher,
+          url: link
         });
       }
-    });
-
-    if (articlesByDate[dateStr]) {
-      return articlesByDate[dateStr];
     }
     
-    // If we asked for today and got nothing for today (rare, but possible late at night or feed delays)
-    // we just return whatever is the latest we got.
-    if (dateStr === todayStr && Object.keys(articlesByDate).length > 0) {
-      const latestDateStr = Object.keys(articlesByDate).sort().reverse()[0];
-      return articlesByDate[latestDateStr];
+    if (Object.keys(articlesByDate).length > 0) {
+      // Upsert all fetched dates into DB (fire and forget)
+      Object.entries(articlesByDate).forEach(([dStr, arts]) => {
+        if (arts.length > 0) {
+          supabase.from('daily_news').upsert({
+            news_date: dStr,
+            articles: arts
+          }, { onConflict: 'news_date' }).then(({ error }) => {
+            if (error) console.error("Failed to cache daily news:", error);
+          });
+        }
+      });
+
+      if (articlesByDate[dateStr]) {
+        return articlesByDate[dateStr];
+      }
+      
+      // If we asked for today and got nothing for today, we just return whatever is the latest we got.
+      if (dateStr === todayStr) {
+        const latestDateStr = Object.keys(articlesByDate).sort().reverse()[0];
+        return articlesByDate[latestDateStr];
+      }
     }
     
     throw new Error("No articles found for this date.");

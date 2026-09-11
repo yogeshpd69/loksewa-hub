@@ -5,8 +5,8 @@
 import { supabase } from '../lib/supabase';
 
 export const GROQ_MODELS = {
-  HEAVY: 'openai/gpt-oss-120b',
-  FAST: 'openai/gpt-oss-20b',
+  HEAVY: 'llama-3.1-70b-versatile',
+  FAST: 'llama-3.1-8b-instant',
 };
 
 export interface ChatMessage {

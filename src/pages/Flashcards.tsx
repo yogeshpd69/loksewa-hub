@@ -8,7 +8,7 @@ import type { Question } from '../data/questions/types';
 import { QuestionSkeleton } from '../components/ui/Skeleton';
 
 const Flashcards: React.FC = () => {
-  const { user, isGuest } = useAuth();
+  const { user, isGuest, profile } = useAuth();
   const { activeSpecialization } = useOrganization();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -18,22 +18,33 @@ const Flashcards: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Get available topics based on specialization
+  // Get available topics strictly based on user's selected preference
+  const pref = profile?.specialization || activeSpecialization;
+  const isEngineering = ['BCT', 'BEI', 'BCE', 'BME', 'BEE'].includes(pref);
+  
+  let allowedSubcategories: any[] = [];
+  if (pref === 'BCT') allowedSubcategories = BCT_SUBCATEGORIES;
+  else if (pref === 'BEI') allowedSubcategories = BEI_SUBCATEGORIES;
+  // Non-engineering exams (Guest/General/Kharidar/Officer etc.) Default to GK & IQ
+  else if (!isEngineering || pref === 'General') allowedSubcategories = [...GK_SUBCATEGORIES, ...IQ_SUBCATEGORIES];
+  else allowedSubcategories = [...GK_SUBCATEGORIES, ...IQ_SUBCATEGORIES];
+
   const availableTopics = [
     { id: 'all', label: 'All Topics (Mix)' },
-    ...GK_SUBCATEGORIES,
-    ...IQ_SUBCATEGORIES,
-    ...(activeSpecialization === 'BCT' || activeSpecialization === 'General' ? BCT_SUBCATEGORIES : []),
-    ...(activeSpecialization === 'BEI' || activeSpecialization === 'General' ? BEI_SUBCATEGORIES : []),
+    ...allowedSubcategories
   ];
 
   const loadCards = useCallback(async (forceRefresh = false, topic = 'all') => {
     setLoading(true);
     
+    const authKey = user && !isGuest ? user.id : 'guest';
+    const cacheKey = `loksewa_fc_questions_${topic}_${authKey}`;
+    const indexKey = `loksewa_fc_index_${topic}_${authKey}`;
+
     if (!forceRefresh) {
       // Try to load from session storage
-      const savedQ = sessionStorage.getItem(`loksewa_fc_questions_${topic}`);
-      const savedIdx = sessionStorage.getItem(`loksewa_fc_index_${topic}`);
+      const savedQ = sessionStorage.getItem(cacheKey);
+      const savedIdx = sessionStorage.getItem(indexKey);
       if (savedQ && savedIdx) {
         setQuestions(JSON.parse(savedQ));
         setCurrentIndex(parseInt(savedIdx));
@@ -43,20 +54,21 @@ const Flashcards: React.FC = () => {
       }
     }
 
-    const topicsToFetch = topic === 'all' ? [] : [topic];
+    const allTopicIds = allowedSubcategories.map(s => s.id);
+    const topicsToFetch = topic === 'all' ? allTopicIds : [topic];
 
     if (user && !isGuest) {
       const q = await fetchPracticeQuestions(user.id, 20, topicsToFetch);
       setQuestions(q);
-      sessionStorage.setItem(`loksewa_fc_questions_${topic}`, JSON.stringify(q));
+      sessionStorage.setItem(cacheKey, JSON.stringify(q));
     } else {
       const { fetchRandomQuestions } = await import('../lib/questions');
       const q = await fetchRandomQuestions(20);
       setQuestions(q);
-      sessionStorage.setItem(`loksewa_fc_questions_${topic}`, JSON.stringify(q));
+      sessionStorage.setItem(cacheKey, JSON.stringify(q));
     }
     setCurrentIndex(0);
-    sessionStorage.setItem(`loksewa_fc_index_${topic}`, '0');
+    sessionStorage.setItem(indexKey, '0');
     setIsFlipped(false);
     setLoading(false);
   }, [user, isGuest]);
@@ -76,7 +88,8 @@ const Flashcards: React.FC = () => {
       if (currentIndex < questions.length - 1) {
         const nextIdx = currentIndex + 1;
         setCurrentIndex(nextIdx);
-        sessionStorage.setItem(`loksewa_fc_index_${selectedTopic}`, nextIdx.toString());
+        const authKey = user && !isGuest ? user.id : 'guest';
+        sessionStorage.setItem(`loksewa_fc_index_${selectedTopic}_${authKey}`, nextIdx.toString());
       } else {
         loadCards(true, selectedTopic); // load next batch
       }

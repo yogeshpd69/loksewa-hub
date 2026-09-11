@@ -161,7 +161,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
     setProfile({
       id: 'guest',
-      display_name: 'Guest',
+      display_name: 'Guest (Unsaved)',
       avatar_url: null,
       organization: 'PSC',
       specialization: 'BCT',

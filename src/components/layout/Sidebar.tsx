@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Home, BookOpen, PenTool, ClipboardCheck, 
-  Book, Newspaper, Lightbulb,
+  Newspaper, Lightbulb,
   Calendar, Bot, Moon, Sun, X, User, LogOut
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         { icon: BookOpen, label: 'Syllabus', path: '/syllabus' },
         { icon: PenTool, label: 'Practice MCQs', path: '/practice' },
         { icon: ClipboardCheck, label: 'Mock Tests', path: '/mock-tests' },
-        { icon: Book, label: 'Notes & PDFs', path: '/notes' },
+        { icon: Newspaper, label: 'Gorkhapatra Loksewa', path: '/gorkhapatra-loksewa' },
         { icon: Newspaper, label: 'Current Affairs', path: '/current-affairs' },
         { icon: Lightbulb, label: 'Flashcards', path: '/flashcards' },
       ]

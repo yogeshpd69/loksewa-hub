@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { XMLParser } from "npm:fast-xml-parser@4.3.5";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,43 +32,30 @@ serve(async (req) => {
       );
     }
 
-    // Fetch RSS
-    const response = await fetch('https://english.onlinekhabar.com/feed');
+    // Fetch news from Kcha Khabar API
+    const response = await fetch('https://kchakhabar.com/api/v1/today.json?limit=10');
     if (!response.ok) {
-      throw new Error(`Failed to fetch RSS: ${response.status}`);
+      throw new Error(`Failed to fetch Kchakhabar API: ${response.status}`);
     }
     
-    const xml = await response.text();
-    
-    // Parse RSS XML robustly using fast-xml-parser
-    const parser = new XMLParser();
-    const result = parser.parse(xml);
-    const items = result?.rss?.channel?.item || [];
-    const itemArray = Array.isArray(items) ? items : [items];
+    const apiData = await response.json();
+    const items = apiData.stories || [];
     const articles = [];
 
-    for (const item of itemArray) {
-      if (!item) continue;
-      if (articles.length >= 6) break; // only top 6
+    for (const item of items) {
+      if (articles.length >= 6) break; // keep top 6
       
-      const title = item.title || '';
-      const link = item.link || '';
-      let summary = item.description || '';
-      
-      // Strip HTML from summary
-      if (typeof summary === 'string') {
-        summary = summary.replace(/<[^>]*>?/gm, '');
-        if (summary.length > 200) {
-          summary = summary.substring(0, 200) + '...';
-        }
-      }
+      const title = item.topic_en || item.topic_ne || '';
+      const summary = item.summary_en || item.summary_ne || '';
+      const link = (item.sources && item.sources.length > 0) ? item.sources[0].url : '';
+      const publisher = (item.sources && item.sources.length > 0) ? item.sources[0].publisher : 'Kcha Khabar API';
 
       if (title && link) {
         articles.push({
-          id: link,
+          id: item.id || link,
           title,
           summary,
-          category: 'National News',
+          category: publisher, // Storing publisher in category field for UI display flexibility
           importance: 'high',
           url: link
         });

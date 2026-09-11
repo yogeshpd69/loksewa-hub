@@ -95,7 +95,7 @@ export const NoteCard = () => {
 export const ActCard = () => {
   const navigate = useNavigate();
   return (
-    <div onClick={() => navigate('/notes')} className="card-hover bg-gradient-to-br from-emerald-400 to-teal-500 p-6 rounded-[24px] shadow-soft mb-6 text-white">
+    <div onClick={() => navigate('/gorkhapatra-loksewa')} className="card-hover bg-gradient-to-br from-emerald-400 to-teal-500 p-6 rounded-[24px] shadow-soft mb-6 text-white">
       <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-4 text-white">
         <Scale size={20} />
       </div>

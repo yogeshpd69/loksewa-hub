@@ -1,6 +1,6 @@
 import React from 'react';
 import { useOrganization } from '../context/OrganizationContext';
-import { PAPER_I_GK_IQ, PAPER_II_PSC_BCT, PAPER_II_NTC_BCT, PAPER_II_NEA_BCT, PAPER_II_BEI, PAPER_II_ADMIN, PAPER_III_ADMIN } from '../data/syllabus';
+import { PAPER_I_GK_IQ, PAPER_II_PSC_BCT, PAPER_II_NTC_BCT, PAPER_II_NEA_BCT, PAPER_II_PSC_BEI, PAPER_II_NTC_BEI, PAPER_II_NEA_BEI, PAPER_II_ADMIN, PAPER_III_ADMIN } from '../data/syllabus';
 import type { SyllabusPaper } from '../data/syllabus';
 import { FileText, Clock, FileCheck } from 'lucide-react';
 
@@ -14,7 +14,9 @@ const SyllabusExplorer: React.FC = () => {
     else if (activeOrganization === 'NEA') papers.push(PAPER_II_NEA_BCT);
     else papers.push(PAPER_II_PSC_BCT);
   } else if (activeSpecialization === 'BEI') {
-    papers.push(PAPER_II_BEI); // TODO: Add BEI splits later
+    if (activeOrganization === 'NTC') papers.push(PAPER_II_NTC_BEI);
+    else if (activeOrganization === 'NEA') papers.push(PAPER_II_NEA_BEI);
+    else papers.push(PAPER_II_PSC_BEI);
   } else {
     papers.push(PAPER_II_ADMIN, PAPER_III_ADMIN);
   }
@@ -29,6 +31,8 @@ const SyllabusExplorer: React.FC = () => {
           {activeSpecialization === 'General' ? 'Section Officer' : `${activeSpecialization} Engineer`}
         </p>
       </div>
+
+
 
       <div className="space-y-8">
         {papers.map(paper => (

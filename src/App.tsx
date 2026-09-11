@@ -10,7 +10,7 @@ import PracticeEngine from './pages/PracticeEngine';
 import SyllabusExplorer from './pages/SyllabusExplorer';
 import MockTestSimulator from './pages/MockTestSimulator';
 import MockSetup from './pages/MockSetup';
-import NotesHub from './pages/NotesHub';
+import GorkhapatraLoksewa from './pages/GorkhapatraLoksewa';
 import CurrentAffairs from './pages/CurrentAffairs';
 import AIAssistant from './pages/AIAssistant';
 import Flashcards from './pages/Flashcards';
@@ -67,7 +67,7 @@ function AppRoutes() {
           <Route path="practice/session" element={<PracticeEngine />} />
           <Route path="mock-tests" element={<MockSetup />} />
           <Route path="mock-tests/session" element={<MockTestSimulator />} />
-          <Route path="notes" element={<NotesHub />} />
+          <Route path="gorkhapatra-loksewa" element={<GorkhapatraLoksewa />} />
           <Route path="current-affairs" element={<CurrentAffairs />} />
           <Route path="flashcards" element={<Flashcards />} />
           <Route path="planner" element={<StudyPlanner />} />

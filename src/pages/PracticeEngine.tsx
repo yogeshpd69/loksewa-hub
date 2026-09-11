@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, XCircle, Flame, Trophy, Info, ChevronRight, RotateCcw } from 'lucide-react';
 import type { Question } from '../data/questions/types';
+import { BCT_SUBCATEGORIES, BEI_SUBCATEGORIES, GK_SUBCATEGORIES, IQ_SUBCATEGORIES } from '../data/questions/types';
 import { useAuth } from '../context/AuthContext';
 import { fetchPracticeQuestions } from '../lib/sm2';
 import { supabase } from '../lib/supabase';
@@ -36,15 +37,22 @@ const PracticeEngine: React.FC = () => {
   // Load questions using SM-2 (or fallback for guest)
   const loadQuestions = useCallback(async () => {
     setIsLoading(true);
+
+    let allowedTopics = activeSubs;
+    if (activeSubs.length === 0) {
+      const pref = profile?.specialization;
+      if (pref === 'BCT') allowedTopics = BCT_SUBCATEGORIES.map(s => s.id);
+      else if (pref === 'BEI') allowedTopics = BEI_SUBCATEGORIES.map(s => s.id);
+      else allowedTopics = [...GK_SUBCATEGORIES, ...IQ_SUBCATEGORIES].map(s => s.id);
+    }
     
     if (user && !isGuest) {
-      const q = await fetchPracticeQuestions(user.id, countParam, activeSubs);
+      const q = await fetchPracticeQuestions(user.id, countParam, allowedTopics);
       setQuestions(q);
     } else {
-      // Guest mode: just fetch random from the lib we made earlier
-      // We import it dynamically to avoid circular dependencies if any
-      const { fetchRandomQuestions } = await import('../lib/questions');
-      const q = await fetchRandomQuestions(countParam);
+      // Guest mode: fetch strictly from allowed topics or random
+      const { fetchQuestions } = await import('../lib/questions');
+      const q = await fetchQuestions(allowedTopics, countParam);
       // If activeSubs is set, we'd normally filter, but fetchRandomQuestions doesn't support it directly.
       // For simplicity in guest mode, just use what we get or we could use fetchQuestions.
       setQuestions(q);
@@ -152,11 +160,17 @@ const PracticeEngine: React.FC = () => {
       {/* Active Topics Summary */}
       <div className="mb-6 flex flex-wrap gap-2">
         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider self-center mr-2">Practicing:</span>
-        {activeSubs.map(sub => (
-          <span key={sub} className="px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold">
-            {sub.replace('bct-', '').replace('bei-', '').replace('-', ' ')}
+        {activeSubs.length === 0 ? (
+          <span className="px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold">
+            All Recommended Modules ({profile?.specialization || 'General'})
           </span>
-        ))}
+        ) : (
+          activeSubs.map(sub => (
+            <span key={sub} className="px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold">
+              {sub.replace('bct-', '').replace('bei-', '').replace('-', ' ')}
+            </span>
+          ))
+        )}
       </div>
 
       {/* Question */}

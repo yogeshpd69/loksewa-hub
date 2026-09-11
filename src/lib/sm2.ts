@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import type { Question } from '../data/questions/types';
 
 // The interval for SM-2 given a repetition count
-const getInterval = (repetitions: number, easeFactor: number): number => {
+export const getInterval = (repetitions: number, easeFactor: number): number => {
   if (repetitions === 1) return 1;
   if (repetitions === 2) return 6;
   return Math.round(6 * Math.pow(easeFactor, repetitions - 2));

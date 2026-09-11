@@ -25,9 +25,9 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: 'AI features require a free account to prevent spam. Please sign in to use this feature.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401
+        status: 200
       });
     }
 
@@ -37,9 +37,9 @@ serve(async (req) => {
     const { data: isAllowed, error: rpcError } = await supabaseAdmin.rpc('check_and_increment_ai_usage', { p_user_id: user.id });
     
     if (rpcError || !isAllowed) {
-      return new Response(JSON.stringify({ error: 'Daily AI usage limit reached (50 requests/day). Cannot complete request.' }), {
+      return new Response(JSON.stringify({ error: 'Daily AI usage limit reached (50 requests/day). Come back tomorrow or upgrade!' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 429
+        status: 200
       });
     }
 
