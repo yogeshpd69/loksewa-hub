@@ -8,49 +8,52 @@ export interface FriendLeaderboardEntry {
   avatar_url: string | null;
 }
 
-export async function addFriendByEmail(userId: string, friendEmail: string) {
-  // First, find the friend by email (we need a way to look them up)
-  // Note: For privacy, we might not be able to search auth.users by email directly from the client.
-  // We'll search profiles if we stored email there, but we didn't. 
-  // Let's assume we can search by display_name or exact email if we add an RPC or Edge function.
-  // For now, let's search by display_name for simplicity in this demo, or we can use an RPC.
-  
-  const { data: friendProfiles, error } = await supabase
-    .from('profiles')
-    .select('id')
-    .ilike('display_name', `%${friendEmail}%`)
-    .limit(1);
-    
-  if (error || !friendProfiles || friendProfiles.length === 0) {
-    return { success: false, error: 'User not found with that name.' };
+export async function requestFriendByEmail(friendEmail: string) {
+  // Use secure RPC to search by exact email and insert a pending friend request
+  const { data, error } = await supabase.rpc('request_friend_by_email', {
+    p_friend_email: friendEmail
+  });
+
+  if (error) {
+    return { success: false, error: 'Failed to send friend request.' };
   }
-
-  const friendId = friendProfiles[0].id;
   
-  if (friendId === userId) {
-    return { success: false, error: 'You cannot add yourself.' };
-  }
-
-  const { error: insertError } = await supabase
-    .from('friends')
-    .insert({ user_id: userId, friend_id: friendId });
-
-  if (insertError) {
-    if (insertError.code === '23505') { // Unique violation
-      return { success: false, error: 'Already friends.' };
-    }
-    return { success: false, error: 'Failed to add friend.' };
+  if (data && data.success === false) {
+    return { success: false, error: data.error };
   }
 
   return { success: true };
 }
 
+export async function acceptFriendRequest(requesterId: string) {
+  const { data, error } = await supabase.rpc('accept_friend_request', {
+    p_requester_id: requesterId
+  });
+
+  if (error || (data && data.success === false)) {
+    return { success: false, error: data?.error || 'Failed to accept request.' };
+  }
+  return { success: true };
+}
+
+export async function rejectFriendRequest(requesterId: string) {
+  const { data, error } = await supabase.rpc('reject_friend_request', {
+    p_requester_id: requesterId
+  });
+
+  if (error || (data && data.success === false)) {
+    return { success: false, error: data?.error || 'Failed to reject request.' };
+  }
+  return { success: true };
+}
+
 export async function getFriendsLeaderboard(userId: string): Promise<FriendLeaderboardEntry[]> {
-  // Get friends list
+  // Get accepted friends list
   const { data: friends, error: friendsError } = await supabase
     .from('friends')
     .select('friend_id')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('status', 'accepted');
     
   if (friendsError || !friends) return [];
 
@@ -70,6 +73,37 @@ export async function getFriendsLeaderboard(userId: string): Promise<FriendLeade
     name: p.display_name || 'Student',
     xp: p.weekly_xp || 0,
     rank: index + 1,
+    avatar_url: p.avatar_url
+  }));
+}
+
+export interface PendingRequest {
+  user_id: string; // The person who sent the request
+  display_name: string;
+  avatar_url: string | null;
+}
+
+export async function getPendingFriendRequests(userId: string): Promise<PendingRequest[]> {
+  const { data: requests, error } = await supabase
+    .from('friends')
+    .select('user_id')
+    .eq('friend_id', userId)
+    .eq('status', 'pending');
+
+  if (error || !requests || requests.length === 0) return [];
+
+  const requesterIds = requests.map(r => r.user_id);
+
+  const { data: profiles, error: pError } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .in('id', requesterIds);
+
+  if (pError || !profiles) return [];
+
+  return profiles.map(p => ({
+    user_id: p.id,
+    display_name: p.display_name || 'Student',
     avatar_url: p.avatar_url
   }));
 }

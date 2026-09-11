@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Target, CheckCircle, BarChart3, TrendingUp, Medal, Flame, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getFriendsLeaderboard, addFriendByEmail } from '../../lib/friends';
-import type { FriendLeaderboardEntry } from '../../lib/friends';
+import { getFriendsLeaderboard, requestFriendByEmail, getPendingFriendRequests, acceptFriendRequest, rejectFriendRequest } from '../../lib/friends';
+import type { FriendLeaderboardEntry, PendingRequest } from '../../lib/friends';
 import { fetchSessions } from '../../lib/planner';
 import { supabase } from '../../lib/supabase';
 
@@ -15,6 +15,7 @@ const RightPanel: React.FC = () => {
   const badges = profile?.badges || [];
 
   const [leaderboard, setLeaderboard] = useState<FriendLeaderboardEntry[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [friendEmail, setFriendEmail] = useState('');
   const [addFriendStatus, setAddFriendStatus] = useState<{success?: boolean; error?: string} | null>(null);
   const [accuracy, setAccuracy] = useState<number>(0);
@@ -32,6 +33,8 @@ const RightPanel: React.FC = () => {
     if (user) {
       const data = await getFriendsLeaderboard(user.id);
       setLeaderboard(data);
+      const pending = await getPendingFriendRequests(user.id);
+      setPendingRequests(pending);
     }
   };
 
@@ -69,7 +72,7 @@ const RightPanel: React.FC = () => {
   const handleAddFriend = async () => {
     if (!friendEmail.trim() || !user) return;
     setAddFriendStatus(null);
-    const result = await addFriendByEmail(user.id, friendEmail);
+    const result = await requestFriendByEmail(friendEmail.trim());
     if (result.success) {
       setFriendEmail('');
       setAddFriendStatus({ success: true });
@@ -78,6 +81,16 @@ const RightPanel: React.FC = () => {
     } else {
       setAddFriendStatus({ error: result.error });
     }
+  };
+
+  const handleAcceptRequest = async (requesterId: string) => {
+    await acceptFriendRequest(requesterId);
+    loadLeaderboard();
+  };
+
+  const handleRejectRequest = async (requesterId: string) => {
+    await rejectFriendRequest(requesterId);
+    loadLeaderboard();
   };
 
   return (
@@ -144,7 +157,28 @@ const RightPanel: React.FC = () => {
               </button>
             </div>
             {addFriendStatus?.error && <div className="text-xs text-danger mt-1">{addFriendStatus.error}</div>}
-            {addFriendStatus?.success && <div className="text-xs text-success mt-1">Friend added!</div>}
+            {addFriendStatus?.success && <div className="text-xs text-success mt-1">Friend request sent!</div>}
+          </div>
+        )}
+
+        {/* Pending Requests */}
+        {pendingRequests.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Pending Requests</h4>
+            <div className="space-y-2">
+              {pendingRequests.map(req => (
+                <div key={req.user_id} className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-2 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <img src={req.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.display_name}`} className="w-6 h-6 rounded-full" alt="avatar" />
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{req.display_name}</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => handleAcceptRequest(req.user_id)} className="p-1 min-w-[60px] text-xs bg-success text-white rounded-lg hover:bg-emerald-600 font-bold">Accept</button>
+                    <button onClick={() => handleRejectRequest(req.user_id)} className="p-1 min-w-[60px] text-xs border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 font-bold">Reject</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
