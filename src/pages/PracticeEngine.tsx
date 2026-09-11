@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, XCircle, Flame, Trophy, Info, ChevronRight, RotateCcw } from 'lucide-react';
 import type { Question } from '../data/questions/types';
 import { useAuth } from '../context/AuthContext';
-import { fetchPracticeQuestions, submitAnswer } from '../lib/sm2';
-import { incrementStreakAndTests, addXP } from '../lib/profile';
+import { fetchPracticeQuestions } from '../lib/sm2';
+import { supabase } from '../lib/supabase';
 import { QuestionSkeleton } from '../components/ui/Skeleton';
 
 const PracticeEngine: React.FC = () => {
@@ -22,6 +22,7 @@ const PracticeEngine: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [answerDetail, setAnswerDetail] = useState<{correctAnswerIndex: number, explanation: string} | null>(null);
 
   // Gamification & Tracking
   const [xp, setXp] = useState(profile?.xp || 0);
@@ -52,8 +53,8 @@ const PracticeEngine: React.FC = () => {
     setCurrentIndex(0);
     setSelectedOption(null);
     setIsAnswered(false);
-    setCorrect(0);
     setTotal(0);
+    setAnswerDetail(null);
     setIsLoading(false);
     questionStartTimeRef.current = Date.now();
   }, [subsParam, countParam, user, isGuest]);
@@ -69,18 +70,29 @@ const PracticeEngine: React.FC = () => {
     setTotal(prev => prev + 1);
     
     const timeTakenSeconds = Math.floor((Date.now() - questionStartTimeRef.current) / 1000);
-    const isCorrect = index === currentQuestion.correctAnswerIndex;
+    const userId = user && !isGuest ? user.id : '00000000-0000-0000-0000-000000000000';
     
-    if (isCorrect) {
+    const { data, error } = await supabase.rpc('submit_practice_answer', {
+      p_user_id: userId,
+      p_question_id: currentQuestion.id,
+      p_selected_option: index,
+      p_time_taken_seconds: timeTakenSeconds
+    });
+
+    if (error || !data) {
+      console.error("Failed to submit answer", error);
+      // Fallback for broken state
+      setAnswerDetail({ correctAnswerIndex: 0, explanation: "Error checking answer state." });
+      return;
+    }
+
+    setAnswerDetail({ correctAnswerIndex: data.correctAnswerIndex, explanation: data.explanation });
+
+    if (data.isCorrect) {
       setCorrect(prev => prev + 1);
-      setXp(prev => prev + 10);
+      setXp(prev => prev + (data.xpAdded || 0));
       setAnimatingXp(true);
       setTimeout(() => setAnimatingXp(false), 800);
-    }
-    
-    // Submit answer to Supabase for SM-2 state update
-    if (user && !isGuest) {
-      await submitAnswer(user.id, currentQuestion.id, isCorrect, index, timeTakenSeconds);
     }
   };
 
@@ -89,15 +101,12 @@ const PracticeEngine: React.FC = () => {
       setCurrentIndex(prev => prev + 1);
       setSelectedOption(null);
       setIsAnswered(false);
+      setAnswerDetail(null);
       questionStartTimeRef.current = Date.now();
     } else {
-      // Completed the set, increment streak and tests
-      if (user && !isGuest) {
-        await incrementStreakAndTests(user.id);
-        if (correct > 0) {
-          await addXP(user.id, correct * 10);
-        }
-        if (refreshProfile) await refreshProfile();
+      // Completed the set
+      if (user && !isGuest && refreshProfile) {
+        await refreshProfile();
       }
       loadQuestions(); // Reshuffle and restart
     }
@@ -111,7 +120,7 @@ const PracticeEngine: React.FC = () => {
     );
   }
 
-  const isCorrectAnswer = selectedOption === currentQuestion.correctAnswerIndex;
+  const isCorrectAnswer = answerDetail ? selectedOption === answerDetail.correctAnswerIndex : false;
 
   return (
     <div className="max-w-3xl mx-auto py-4 pb-24 flex flex-col">
@@ -158,9 +167,19 @@ const PracticeEngine: React.FC = () => {
         <div className="space-y-2.5">
           {currentQuestion.options.map((option, index) => {
             const isSelected = selectedOption === index;
-            const isCorrectOpt = index === currentQuestion.correctAnswerIndex;
+            const isCorrectOpt = answerDetail && index === answerDetail.correctAnswerIndex;
+            
+            // While evaluating...
+            if (isAnswered && !answerDetail) {
+              return (
+                <button key={index} disabled className="w-full p-3.5 rounded-xl border-2 text-left text-[15px] font-medium opacity-50 bg-gray-50 border-gray-200">
+                  {option}
+                </button>
+              );
+            }
+
             let style = 'bg-white dark:bg-dark-surface border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-primary hover:bg-primary/5';
-            if (isAnswered) {
+            if (isAnswered && answerDetail) {
               if (isCorrectOpt) style = 'bg-success/10 border-success text-success dark:bg-success/20';
               else if (isSelected) style = 'bg-danger/10 border-danger text-danger dark:bg-danger/20';
               else style = 'bg-white dark:bg-dark-surface border-gray-100 dark:border-gray-800 text-gray-400 opacity-50';
@@ -189,7 +208,7 @@ const PracticeEngine: React.FC = () => {
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4">
                   <span className="font-bold flex items-center gap-1 mb-1"><Info size={14} className="text-primary" /> Explanation:</span>
-                  {currentQuestion.explanation}
+                  {answerDetail?.explanation || "No explanation provided."}
                 </p>
                 <button onClick={handleNext}
                   className="w-full sm:w-auto px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-xl shadow-sm hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 text-sm">

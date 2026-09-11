@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Clock, Flag, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { useOrganization } from '../context/OrganizationContext';
 import { useAuth } from '../context/AuthContext';
-import { incrementStreakAndTests, addXP } from '../lib/profile';
+// Gamification is handled in RPC
 import type { Question } from '../data/questions/types';
 import { fetchRandomQuestions } from '../lib/questions';
+import { supabase } from '../lib/supabase';
 import SubjectiveReview from '../components/ui/SubjectiveReview';
 
 const MockTestSimulator: React.FC = () => {
@@ -22,6 +23,7 @@ const MockTestSimulator: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
+  const [testResult, setTestResult] = useState<{ score: number, correct: number, wrong: number, unanswered: number, xpAdded: number, review: any[] } | null>(null);
   
   // MCQ = (count/50)*45 mins, Subjective = 3 hours (10800s)
   const initialTime = testType === 'subjective' ? 10800 : Math.floor((qCountParam / 50) * 45) * 60;
@@ -87,27 +89,33 @@ const MockTestSimulator: React.FC = () => {
     });
   };
 
-  const calculateScore = useCallback(() => {
-    let correctCount = 0;
-    let wrongCount = 0;
-    for (const [idx, ans] of Object.entries(answers)) {
-      if (examQuestions[Number(idx)]?.correctAnswerIndex === ans) correctCount++;
-      else wrongCount++;
-    }
-    const score = correctCount - (wrongCount * 0.2); // 20% negative marking
-    return { correctCount, wrongCount, unanswered: qCountParam - Object.keys(answers).length, score: Math.max(0, score) };
-  }, [answers, examQuestions, qCountParam]);
-
   const handleSubmit = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
     
-    if (user && !isGuest) {
-      await incrementStreakAndTests(user.id);
-      if (testType === 'mcq') {
-        const { score } = calculateScore();
-        await addXP(user.id, Math.floor(score * 20));
+    if (testType === 'mcq') {
+      let mappedAnswers: Record<string, number> = {};
+      for (const [idx, ans] of Object.entries(answers)) {
+        mappedAnswers[examQuestions[Number(idx)].id] = ans;
       }
-      if (refreshProfile) await refreshProfile();
+      const qIds = examQuestions.map(q => q.id);
+      
+      const userId = user && !isGuest ? user.id : '00000000-0000-0000-0000-000000000000';
+      
+      const { data, error } = await supabase.rpc('grade_mock_test', {
+        p_user_id: userId,
+        p_answers: mappedAnswers,
+        p_question_ids: qIds
+      });
+      
+      if (error) {
+        console.error("Grading failed:", error);
+      } else {
+        setTestResult(data);
+      }
+    }
+    
+    if (user && !isGuest && refreshProfile) {
+      await refreshProfile();
     }
     setIsSubmitted(true);
   };
@@ -129,30 +137,31 @@ const MockTestSimulator: React.FC = () => {
   }
 
   // --- MCQ POST-SUBMIT REVIEW ---
-  if (isSubmitted && showReview) {
+  if (isSubmitted && showReview && testResult) {
     return (
       <div className="max-w-4xl mx-auto py-8">
         <button onClick={() => setShowReview(false)} className="mb-6 font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">← Back to Score</button>
         <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6">Detailed Review</h2>
         <div className="space-y-6">
-          {examQuestions.map((q, idx) => {
-            const userAns = answers[idx];
-            const isCorrect = userAns === q.correctAnswerIndex;
+          {testResult.review.map((item: any, idx: number) => {
+            const userAns = item.selected;
+            const isCorrect = userAns === item.correct;
+            const options = item.options || [];
             return (
-              <div key={idx} className={`p-6 rounded-2xl border-2 ${isCorrect ? 'bg-success/5 border-success/30' : (userAns === undefined ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' : 'bg-danger/5 border-danger/30')}`}>
-                <h3 className="font-bold text-gray-900 dark:text-white mb-4"><span className="text-gray-400 mr-2">Q{idx+1}.</span>{q.questionText}</h3>
+              <div key={idx} className={`p-6 rounded-2xl border-2 ${isCorrect ? 'bg-success/5 border-success/30' : (userAns === null ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' : 'bg-danger/5 border-danger/30')}`}>
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4"><span className="text-gray-400 mr-2">Q{idx+1}.</span>{examQuestions[idx]?.questionText || "Question text unavailable"}</h3>
                 <div className="space-y-2 mb-4">
-                  {q.options.map((opt, oIdx) => (
-                    <div key={oIdx} className={`px-4 py-2 rounded-lg text-sm flex items-center justify-between border ${oIdx === q.correctAnswerIndex ? 'bg-success/10 border-success text-success font-bold' : (userAns === oIdx ? 'bg-danger/10 border-danger text-danger' : 'border-transparent text-gray-500')}`}>
+                  {options.map((opt: string, oIdx: number) => (
+                    <div key={oIdx} className={`px-4 py-2 rounded-lg text-sm flex items-center justify-between border ${oIdx === item.correct ? 'bg-success/10 border-success text-success font-bold' : (userAns === oIdx ? 'bg-danger/10 border-danger text-danger' : 'border-transparent text-gray-500')}`}>
                       <span>{opt}</span>
-                      {oIdx === q.correctAnswerIndex && <CheckCircle2 size={16} />}
-                      {userAns === oIdx && oIdx !== q.correctAnswerIndex && <XCircle size={16} />}
+                      {oIdx === item.correct && <CheckCircle2 size={16} />}
+                      {userAns === oIdx && oIdx !== item.correct && <XCircle size={16} />}
                     </div>
                   ))}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-dark-surface p-3 rounded-xl border border-gray-100 dark:border-gray-700">
                   <span className="font-bold text-gray-900 dark:text-white block mb-1">Explanation:</span>
-                  {q.explanation}
+                  {item.explanation || "No explanation provided."}
                 </div>
               </div>
             );
@@ -163,18 +172,18 @@ const MockTestSimulator: React.FC = () => {
   }
 
   // --- MCQ SCORE SCREEN ---
-  if (isSubmitted && testType === 'mcq') {
-    const { correctCount, wrongCount, unanswered, score } = calculateScore();
+  if (isSubmitted && testType === 'mcq' && testResult) {
+    const { correct, wrong, unanswered, score } = testResult;
     return (
       <div className="max-w-lg mx-auto py-12 flex flex-col items-center text-center">
         <CheckCircle2 size={56} className="text-success mb-4" />
         <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">Test Submitted!</h2>
         <p className="text-gray-500 mb-8">Here are your results</p>
         <div className="w-full grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-success/10 p-4 rounded-2xl"><div className="text-2xl font-extrabold text-success">{correctCount}</div><div className="text-xs text-gray-500 font-bold">Correct</div></div>
-          <div className="bg-danger/10 p-4 rounded-2xl"><div className="text-2xl font-extrabold text-danger">{wrongCount}</div><div className="text-xs text-gray-500 font-bold">Wrong</div></div>
+          <div className="bg-success/10 p-4 rounded-2xl"><div className="text-2xl font-extrabold text-success">{correct}</div><div className="text-xs text-gray-500 font-bold">Correct</div></div>
+          <div className="bg-danger/10 p-4 rounded-2xl"><div className="text-2xl font-extrabold text-danger">{wrong}</div><div className="text-xs text-gray-500 font-bold">Wrong</div></div>
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl"><div className="text-2xl font-extrabold text-gray-600 dark:text-gray-300">{unanswered}</div><div className="text-xs text-gray-500 font-bold">Unanswered</div></div>
-          <div className="bg-primary/10 p-4 rounded-2xl"><div className="text-2xl font-extrabold text-primary">{score.toFixed(1)}</div><div className="text-xs text-gray-500 font-bold">Final Score</div></div>
+          <div className="bg-primary/10 p-4 rounded-2xl"><div className="text-2xl font-extrabold text-primary">{Number(score).toFixed(1)}</div><div className="text-xs text-gray-500 font-bold">Final Score</div></div>
         </div>
         <div className="flex gap-4 w-full">
           <button onClick={() => navigate('/mock-tests')} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Done</button>

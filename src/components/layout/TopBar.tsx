@@ -4,6 +4,7 @@ import { Bell, Flame, ChevronDown, Menu } from 'lucide-react';
 import { useOrganization } from '../../context/OrganizationContext';
 import { OrganizationSelectorModal } from '../ui/OrganizationSelectorModal';
 import { useAuth } from '../../context/AuthContext';
+import { getComputedStreak } from '../../lib/profile';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -14,7 +15,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
   const { activeOrganization, activeSpecialization } = useOrganization();
   const { profile, isGuest } = useAuth();
 
-  const streak = profile?.streak_days || 0;
+  const streak = getComputedStreak(profile?.streak_days || 0, profile?.last_active_date || '');
   const displayName = profile?.display_name || 'Student';
   const avatarUrl = profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}&backgroundColor=b6e3f4`;
 

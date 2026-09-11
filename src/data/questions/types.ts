@@ -36,8 +36,8 @@ export interface Question {
   organization: Organization[];
   questionText: string;
   options: string[];
-  correctAnswerIndex: number;
-  explanation: string;
+  correctAnswerIndex?: number;
+  explanation?: string;
 }
 
 // Subcategory metadata for UI display

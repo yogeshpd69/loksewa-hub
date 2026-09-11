@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Flame, Trophy, Play, CheckSquare, Target, Newspaper, Layers, BrainCircuit, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { fetchDailyNews } from '../lib/news';
+import { getComputedStreak } from '../lib/profile';
 import type { NewsArticle } from '../lib/news';
 
 const Dashboard: React.FC = () => {
@@ -38,7 +39,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Day Streak</p>
-              <p className="text-2xl font-black text-gray-900 dark:text-white leading-none mt-1">{profile?.streak_days || 0}</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white leading-none mt-1">{getComputedStreak(profile?.streak_days || 0, profile?.last_active_date || '')}</p>
             </div>
           </div>
           

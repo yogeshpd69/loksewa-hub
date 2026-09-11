@@ -14,7 +14,7 @@ export async function fetchPracticeQuestions(userId: string, count: number, subc
   // 1. Fetch due questions from SM-2 state
   let query = supabase
     .from('user_question_state')
-    .select('question_id, questions!inner(*)')
+    .select('question_id, questions!inner(id, category, subcategory, organization, question_text, options)')
     .eq('user_id', userId)
     .lte('next_review_date', today)
     .order('next_review_date', { ascending: true })
@@ -45,8 +45,6 @@ export async function fetchPracticeQuestions(userId: string, count: number, subc
           organization: q.organization,
           questionText: q.question_text,
           options: q.options || [],
-          correctAnswerIndex: q.correct_answer_index,
-          explanation: q.explanation,
         });
       }
     });
@@ -57,7 +55,7 @@ export async function fetchPracticeQuestions(userId: string, count: number, subc
   if (remaining > 0) {
     let newQuery = supabase
       .from('questions')
-      .select('*')
+      .select('id, category, subcategory, organization, question_text, options')
       .limit(remaining * 3); // Fetch a buffer to filter out seen ones locally if needed, or use a left join
 
     if (subcategories.length > 0) {
@@ -77,8 +75,6 @@ export async function fetchPracticeQuestions(userId: string, count: number, subc
         organization: q.organization,
         questionText: q.question_text,
         options: q.options || [],
-        correctAnswerIndex: q.correct_answer_index,
-        explanation: q.explanation,
       }));
       
       questions = [...questions, ...freshQuestions];

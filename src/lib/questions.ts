@@ -9,7 +9,7 @@ export async function fetchQuestions(filters?: {
   organization?: Organization;
   limit?: number;
 }): Promise<Question[]> {
-  let query = supabase.from('questions').select('*');
+  let query = supabase.from('questions').select('id, category, subcategory, organization, question_text, options');
 
   if (filters) {
     if (filters.paper) query = query.eq('paper', filters.paper);
@@ -33,8 +33,6 @@ export async function fetchQuestions(filters?: {
     organization: row.organization,
     questionText: row.question_text,
     options: row.options || [],
-    correctAnswerIndex: row.correct_answer_index,
-    explanation: row.explanation,
   }));
 }
 
@@ -68,7 +66,7 @@ export async function fetchRandomQuestions(count: number, paper?: 'paper1' | 'pa
   // Shuffle and pick top `count`
   const shuffledIds = idData.map(r => r.id).sort(() => 0.5 - Math.random()).slice(0, count);
 
-  const { data: qData } = await supabase.from('questions').select('*').in('id', shuffledIds);
+  const { data: qData } = await supabase.from('questions').select('id, category, subcategory, organization, question_text, options').in('id', shuffledIds);
   
   return (qData || []).map(row => ({
     id: row.id,
@@ -77,7 +75,5 @@ export async function fetchRandomQuestions(count: number, paper?: 'paper1' | 'pa
     organization: row.organization,
     questionText: row.question_text,
     options: row.options || [],
-    correctAnswerIndex: row.correct_answer_index,
-    explanation: row.explanation,
   })).sort(() => 0.5 - Math.random()); // Shuffle final result too
 }
